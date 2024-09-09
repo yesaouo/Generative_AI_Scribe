@@ -291,32 +291,7 @@ dialog {
 }
 
 
-.main-btns {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    padding: 20px;
-}
-.main-btns button {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 10px;
-    background-color: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-.main-btns button.selected {
-    background-color: #e0e0e0; /* 選中時的背景顏色 */
-    font-weight: bold;
-}
-.main-btns .icon {
-    font-size: 24px;
-    margin-bottom: 5px;
-}
-.main-func.settings {
+.main-func.setting {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -398,6 +373,11 @@ dialog {
     width: 300px;
     height: 105px;
 }
+.record-container.new, .record-container.refresh {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 .record-container .header {
     display: flex;
     justify-content: space-between;
@@ -428,4 +408,88 @@ dialog {
     overflow: hidden;
     text-overflow: ellipsis;
     word-break: break-all;
+}
+.plus-button {
+    width: 60px;
+    height: 60px;
+    background-color: #ffffff;
+    border: 2px solid #3498db;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.plus-button:hover {
+    background-color: #3498db;
+    transform: scale(1.1);
+}
+.plus-button::before,
+.plus-button::after {
+    content: '';
+    position: absolute;
+    background-color: #3498db;
+    transition: all 0.3s ease;
+}
+.plus-button::before {
+    width: 2px;
+    height: 30px;
+}
+.plus-button::after {
+    width: 30px;
+    height: 2px;
+}
+.plus-button:hover::before,
+.plus-button:hover::after {
+    background-color: #ffffff;
+}
+.refresh-button {
+    width: 60px;
+    height: 60px;
+    background-color: #ffffff;
+    border: 2px solid #2ecc71;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    position: relative;
+}
+.refresh-button:hover {
+    background-color: #2ecc71;
+    transform: scale(1.1);
+}
+.refresh-icon {
+    width: 30px;
+    height: 30px;
+    border: 2px solid #2ecc71;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    position: relative;
+}
+.refresh-icon::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 8px solid #2ecc71;
+    transform: rotate(45deg);
+    transition: all 0.3s ease;
+}
+.refresh-button:hover .refresh-icon {
+    border-color: #ffffff;
+    border-top-color: transparent;
+    transform: rotate(180deg);
+}
+.refresh-button:hover .refresh-icon::after {
+    border-bottom-color: #ffffff;
 }

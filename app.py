@@ -95,6 +95,7 @@ def upload_file(folder_name):
     if file_name == '':
         return jsonify({"success": False, "error": "No selected file"}), 400
     file.save(os.path.join('uploads', folder_name, file_name))
+    RESOURCE.start_processing()
     return jsonify({"success": True, "filename": file_name})
 
 @app.route('/api/move', methods=['POST'])
@@ -104,6 +105,12 @@ def move_file():
     new_folder = data.get('new_folder')
     file_name = data.get('file_name')
     return jsonify({"success": RESOURCE.move_file(folder, new_folder, file_name)})
+
+@app.route('/api/folder', methods=['DELETE'])
+def delete_folder():
+    data = request.json
+    folder = data.get('folder')
+    return jsonify({"success": RESOURCE.delete_folder(folder)})
 
 @app.route('/api/delete', methods=['DELETE'])
 def delete_file():

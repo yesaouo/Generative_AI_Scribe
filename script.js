@@ -1,14 +1,13 @@
 const API_BASE_URL = 'http://localhost:5000/api';
 
 let folderList = [];
-let selectedButton = null;
+let recordList = [];
 
 document.addEventListener('DOMContentLoaded', function() {
     const nav = document.querySelector('nav');
     const main = document.querySelector('main');
     const menuIcon = document.querySelector('.menu-icon');
     const setsIcon = document.querySelector('.sets-icon');
-    const mainBtns = document.querySelectorAll('.main-btns button');
     const mainFuncContainer = document.querySelector('.main-func');
     const refreshBtn = document.getElementById('refreshBtn');
     const folderContainer = document.getElementById('folderContainer');
@@ -78,30 +77,25 @@ document.addEventListener('DOMContentLoaded', function() {
         if (deleteMode) {
             const target = e.target.closest('.folder, .file-link');
             if (target) {
-                target.remove();
+                if (target.matches('.folder') && confirm('確定要刪除整個資料夾嗎?')) {
+                    // 處理選到的是 folder
+                    const folderName = target.querySelector('.folder-header span').textContent;
+                    deleteFolder(folderName);
+                    target.remove();
+                } else if (target.matches('.file-link')) {
+                    // 處理選到的是 file-link
+                    const folderName = target.closest('.folder').querySelector('.folder-header span').textContent;
+                    const fileName = target.innerHTML;
+                    deleteFile(folderName, fileName);
+                    target.remove();
+                }
             }
         }
     });
 
-    mainBtns.forEach(button => {
-        button.classList.remove('selected');
-        button.addEventListener('click', function() {
-            if (this === selectedButton) {
-                this.classList.remove('selected');
-                selectedButton = null;
-            } else {
-                if (selectedButton) {
-                    selectedButton.classList.remove('selected');
-                }
-                this.classList.add('selected');
-                selectedButton = this;
-            }
-            setMainFunc();
-        });
-    });
-
     initLogin();
     fetchFolders();
+    fetchRecords();
   
     function dragOver(e) {
         e.preventDefault();
@@ -258,10 +252,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     continue;
                 }
             } else {
+                const fileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
                 const fileElement = document.createElement('div');
                 fileElement.className = 'file-link';
                 fileElement.draggable = true;
-                fileElement.textContent = file.name;
+                fileElement.textContent = fileName;
                 folderContent.appendChild(fileElement);
             }
             uploadFile(folderName, file);
@@ -308,6 +303,46 @@ document.addEventListener('DOMContentLoaded', function() {
         folderList.forEach(folder => {
             createFolder(folder.name, folder.fileNames);
         });
+    }
+
+    function setRecords() {
+        mainFuncContainer.innerHTML = '';
+        mainFuncContainer.classList.remove('setting');
+        mainFuncContainer.classList.add('records');
+        if (recordList[0].title === '') {
+            mainFuncContainer.appendChild(refreshContainer());
+        } else {
+            mainFuncContainer.appendChild(newContainer());
+        }
+        recordList.forEach(record => {
+            mainFuncContainer.appendChild(RecordContainer(record));
+        });
+    }
+
+    function setSetting() {
+        mainFuncContainer.innerHTML = '';
+        mainFuncContainer.classList.remove('records');
+        mainFuncContainer.classList.add('setting');
+        mainFuncContainer.innerHTML = `
+            <div class="file-selector">
+                <div class="header">
+                    <span>選擇使用文件</span>
+                    <div class="select-all-container">
+                        <input type="checkbox" id="selectAll" class="select-all-checkbox">
+                        <label for="selectAll">全選/全不選</label>
+                    </div>
+                </div>
+                <div id="foldersContainer"></div>
+            </div>
+            <div class="model-selector">
+                <button id="cancelBtn">返回</button>
+                <select name="models" id="modelSelect">
+                    <option value="">--選擇回應模型--</option>
+                </select>
+                <button id="submitBtn">送出</button>
+            </div>
+        `;
+        SettingContainer();
     }
 
     function setProgress(value, max) {
@@ -426,6 +461,44 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function deleteFolder(folder) {
+        fetch(`${API_BASE_URL}/folder`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folder: folder }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('Folder deleted successfully');
+            } else {
+                console.error('Failed to delete folder');
+            }
+        }).catch(error => {
+            console.error('Error delete Folder:', error);
+            showSnackbar('offline');
+        });
+    };
+
+    function deleteFile(folder, fileName) {
+        fetch(`${API_BASE_URL}/delete`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folder: folder, file_name: fileName }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('File deleted successfully');
+            } else {
+                console.error('Failed to delete file');
+            }
+        }).catch(error => {
+            console.error('Error delete File:', error);
+            showSnackbar('offline');
+        });
+    };
+
     function fetchFolders() {
         fetch(`${API_BASE_URL}/folders`).then(response => response.json())
         .then(data => {
@@ -434,6 +507,17 @@ document.addEventListener('DOMContentLoaded', function() {
             setProgress(data.value, data.max);
         }).catch(error => {
             console.error('Error fetching Folders:', error);
+            showSnackbar('offline');
+        });
+    }
+
+    function fetchRecords() {
+        fetch(`${API_BASE_URL}/records`).then(response => response.json())
+        .then(records => {
+            recordList = records;
+            setRecords();
+        }).catch(error => {
+            console.error('Error fetching Records:', error);
             showSnackbar('offline');
         });
     }
@@ -462,33 +546,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     }
 
-    
-    function setMainFunc() {
-        mainFuncContainer.innerHTML = "";
-        if (selectedButton) {
-            const choose = selectedButton.value;
-            if (choose === "歷史紀錄") {
-                RecordsContainer();
-            } else {
-                SettingsContainer(choose);
+    function refreshContainer() {
+        const div = document.createElement('div');
+        div.className = 'record-container refresh';
+        div.innerHTML = `
+            <div class="refresh-button">
+                <div class="refresh-icon"></div>
+            </div>
+        `;
+        div.addEventListener('click', function(event) {
+            if (event.target.classList.contains('refresh-button') || event.target.classList.contains('refresh-icon')) {
+                fetchRecords();
             }
-        }
+        });
+        return div;
     }
 
-    function RecordsContainer() {
-        mainFuncContainer.innerHTML = '';
-        mainFuncContainer.classList.remove('settings');
-        mainFuncContainer.classList.add('records');
-        
-        fetch(`${API_BASE_URL}/records`)
-            .then(response => response.json())
-            .then((records) => {
-                //records.sort((a, b) => b.isMark - a.isMark);
-                records.forEach((record) => {
-                    mainFuncContainer.appendChild(RecordContainer(record));
-                });
-            })
-            .catch(error => console.error('Error fetching Records:', error));
+    function newContainer() {
+        const div = document.createElement('div');
+        div.className = 'record-container new';
+        div.innerHTML = `
+            <div class="plus-button"></div>
+        `;
+        div.addEventListener('click', function(event) {
+            if (event.target.classList.contains('plus-button')) {
+                setSetting();
+            }
+        });
+        return div;
     }
     
     function RecordContainer(record) {
@@ -513,7 +598,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.stopPropagation();
                 fetch(`${API_BASE_URL}/record/${record.id}/toggle_mark`, { method: 'POST' })
                     .then(response => response.json())
-                    .then(data => RecordsContainer())
+                    .then(data => fetchRecords())
                     .catch(error => console.error('Error toggling mark:', error));
             });
             div.addEventListener('click', function(e) {
@@ -529,38 +614,20 @@ document.addEventListener('DOMContentLoaded', function() {
         return div;
     }
     
-    function SettingsContainer(choose) {
-        mainFuncContainer.innerHTML = '';
-        mainFuncContainer.classList.remove('records');
-        mainFuncContainer.classList.add('settings');
-        mainFuncContainer.innerHTML = `
-            <div class="file-selector">
-                <div class="header">
-                    <span>選擇使用文件</span>
-                    <div class="select-all-container">
-                        <input type="checkbox" id="selectAll" class="select-all-checkbox">
-                        <label for="selectAll">全選/全不選</label>
-                    </div>
-                </div>
-                <div id="foldersContainer"></div>
-            </div>
-            <div class="model-selector">
-                <select name="models" id="modelSelect">
-                    <option value="">--選擇回應模型--</option>
-                </select>
-                <button id="submitBtn">送出</button>
-            </div>
-        `;
-
+    function SettingContainer(choose) {
         fetch(`${API_BASE_URL}/choose`).then(response => response.json())
         .then(data => {
             setProgress(data.value, data.max);
             const folders = data.folders;
             const models = data.models;
             const foldersContainer = document.getElementById('foldersContainer');
+            const cancelBtn = document.getElementById('cancelBtn');
             const submitBtn = document.getElementById('submitBtn');
             const selectAllCheckbox = document.getElementById('selectAll');
             const modelSelect = document.getElementById('modelSelect');
+            cancelBtn.addEventListener('click', () => {
+                fetchRecords();
+            });
             submitBtn.addEventListener('click', () => {
                 processFiles(choose, modelSelect, getSelectedFiles());
             });
@@ -644,8 +711,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error fetching Choose:', error);
             showSnackbar('offline');
         });
-    
-    
     }
     
     function processFiles(choose, modelSelect, files) {
@@ -673,7 +738,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     alert('有對話正在執行中，執行完畢後才能開啟新的對話。');
                 }
-                document.querySelector('.main-btns button[value="歷史紀錄"]').click();
+                fetchRecords();
             })
             .catch(error => console.error('Error processing files:', error));
         } else {

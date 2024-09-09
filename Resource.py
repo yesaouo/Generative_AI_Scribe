@@ -87,6 +87,21 @@ class FileProcessor:
             print(f"An error occurred while trying to move the file or folder: {e}")
             return False
 
+    def delete_folder(self, folder):
+        try:
+            uploads_path = os.path.join("uploads", folder)
+            resource_path = os.path.join("resource", folder)
+            if os.path.exists(uploads_path):
+                shutil.rmtree(uploads_path)
+                print(f"Folder {uploads_path} has been successfully deleted.")
+            if os.path.exists(resource_path):
+                shutil.rmtree(resource_path)
+                print(f"Folder {resource_path} has been successfully deleted.")
+            return True
+        except Exception as e:
+            print(f"An error occurred while trying to delete the file or folder: {e}")
+            return False
+
     def delete_file(self, folder, file_name):
         try:
             file_path = os.path.join("uploads", folder, f'{file_name}.pdf')
