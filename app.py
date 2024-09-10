@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os, shutil, asyncio
 from datetime import datetime
@@ -61,15 +61,24 @@ def process_files():
 def toggle_record_mark(record_id):
     return jsonify({"success": RECORD.toggle_mark(record_id)})
 
-@app.route('/api/pdf/<string:pdf_name>', methods=['GET'])
-def get_pdf_content(pdf_name):
-    # 這裡應該實現獲取PDF內容的邏輯
-    return jsonify({"content": f"Content of {pdf_name}"})
+@app.route('/api/pdf/<string:pdf_path>/<string:pdf_name>')
+def serve_pdf(pdf_path, pdf_name):
+    pdf_dir = os.path.join('uploads', pdf_path)
+    pdf_name += '.pdf'
+    return send_from_directory(pdf_dir, pdf_name)
 
 @app.route('/api/record/<string:record_id>', methods=['GET'])
 def get_record_content(record_id):
-    # 這裡應該實現獲取PDF內容的邏輯
-    return jsonify({"content": f"Content of {record_id}"})
+    return render_template('index.html', record=RECORD.load_record(record_id))
+
+@app.route('/api/record/<string:record_id>/chat', methods=['POST'])
+def get_record_chat(record_id):
+    message = request.json['message']
+    # 這裡應該是您的語言模型邏輯
+    if len(RECORD.get_unprocessed_records()) > 0:
+        return jsonify({'response': '模型正在執行中，請稍後再做嘗試。'})
+    response = f"這是對 '{record_id}': '{message}' 的模擬回覆。"
+    return jsonify({'response': response})
 
 @app.route('/api/login', methods=['POST'])
 def login():

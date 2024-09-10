@@ -74,20 +74,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     folderContainer.addEventListener('click', (e) => {
-        if (deleteMode) {
-            const target = e.target.closest('.folder, .file-link');
-            if (target) {
-                if (target.matches('.folder') && confirm('確定要刪除整個資料夾嗎?')) {
-                    // 處理選到的是 folder
+        const target = e.target.closest('.folder, .file-link');
+        if (target) {
+            if (target.matches('.folder')) {
+                if (deleteMode && confirm('確定要刪除整個資料夾嗎?')) {
                     const folderName = target.querySelector('.folder-header span').textContent;
                     deleteFolder(folderName);
                     target.remove();
-                } else if (target.matches('.file-link')) {
-                    // 處理選到的是 file-link
-                    const folderName = target.closest('.folder').querySelector('.folder-header span').textContent;
-                    const fileName = target.innerHTML;
+                }
+            } else if (target.matches('.file-link')) {
+                const folderName = target.closest('.folder').querySelector('.folder-header span').textContent;
+                const fileName = target.innerHTML;
+                if (deleteMode) {
                     deleteFile(folderName, fileName);
                     target.remove();
+                } else {
+                    window.open(`${API_BASE_URL}/pdf/${folderName}/${fileName}`, '_blank');
                 }
             }
         }
@@ -309,10 +311,10 @@ document.addEventListener('DOMContentLoaded', function() {
         mainFuncContainer.innerHTML = '';
         mainFuncContainer.classList.remove('setting');
         mainFuncContainer.classList.add('records');
-        if (recordList[0].title === '') {
-            mainFuncContainer.appendChild(refreshContainer());
-        } else {
+        if (recordList.length < 1 || recordList[0].title !== '') {
             mainFuncContainer.appendChild(newContainer());
+        } else {
+            mainFuncContainer.appendChild(refreshContainer());
         }
         recordList.forEach(record => {
             mainFuncContainer.appendChild(RecordContainer(record));
@@ -582,7 +584,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (record.title === '') {
             div.innerHTML = `
                 <div class="header"><h2>執行中</h2><progress></progress></div>
-                <div class="pdfs">${record.pdfs.join(', ')}</div>
+                <div class="pdfs">${record.pdfs.map(pdf => pdf.name).join(', ')}</div>
                 <div class="content">等待執行完成...</div>
             `;
         } else {
@@ -591,7 +593,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <h2>${record.title}</h2>
                     <div class="heart">${record.isMark ? '❤️' : '🤍'}</div>
                 </div>
-                <div class="pdfs">${record.pdfs.join(', ')}</div>
+                <div class="pdfs">${record.pdfs.map(pdf => pdf.name).join(', ')}</div>
                 <div class="content">${record.content}</div>
             `;
             div.querySelector('.heart').addEventListener('click', function(e) {
@@ -602,13 +604,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     .catch(error => console.error('Error toggling mark:', error));
             });
             div.addEventListener('click', function(e) {
-                fetch(`${API_BASE_URL}/record/${record.id}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log(data.content);
-                        // 在這裡處理PDF內容，例如顯示在一個模態框中
-                    })
-                    .catch(error => console.error('Error fetching Record content:', error));
+                window.open(`${API_BASE_URL}/record/${record.id}`, '_blank')
             });
         }
         return div;

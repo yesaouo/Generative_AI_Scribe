@@ -4,7 +4,6 @@ from adaptive_semantic_similarity import AggregateEmbeddings
 from Record import RecordManager
 
 class GeneticAlgorithm:
-
     def __init__(self, process_id, keyphrase_result, chatbot, model_index=0, mutation_rate=0.1, population_size=None, generations=None, N=None,):
         self.chatbot = chatbot
         self.model_index = model_index

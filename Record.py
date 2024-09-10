@@ -48,12 +48,19 @@ class RecordManager:
                 return True
         return False
 
-    def create_record(self, pdfs):
+    def load_record(self, id):
+        records = self.load_records()
+        for record in records:
+            if record['id'] == id:
+                return record
+        return None
+
+    def create_record(self, pdfs_list):
         id = self.generate_id()
         new_record = {
             "id": id,
             "isMark": False,
-            "pdfs": pdfs,
+            "pdfs": self.convert_pdfs(pdfs_list),
             "title": "",
             "content": "",
             "zh_content": ""
@@ -69,6 +76,13 @@ class RecordManager:
     def generate_id(self):
         timestamp = int(time.time() * 1000)
         return str(timestamp)
+
+    def convert_pdfs(self, pdfs_list):
+        pdfs = []
+        for pdf in pdfs_list:
+            path, name = os.path.split(pdf)
+            pdfs.append({ "path": path, "name": name })
+        return pdfs
 
     def delete_unprocessed_records(self):
         unprocessed = self.get_unprocessed_records()
