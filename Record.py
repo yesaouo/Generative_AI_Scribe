@@ -39,6 +39,16 @@ class RecordManager:
                 return True
         return False
 
+    def edit_chat(self, id, chat=None):
+        records = self.load_records()
+        for record in records:
+            if record['id'] == id:
+                if chat:
+                    record['chat'] = chat
+                self.save_record(record)
+                return True
+        return False
+
     def toggle_mark(self, id):
         records = self.load_records()
         for record in records:
@@ -63,7 +73,8 @@ class RecordManager:
             "pdfs": self.convert_pdfs(pdfs_list),
             "title": "",
             "content": "",
-            "zh_content": ""
+            "zh_content": "",
+            "chat": ""
         }
         self.save_record(new_record)
         return id

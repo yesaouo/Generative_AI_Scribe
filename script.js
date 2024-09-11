@@ -358,22 +358,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function initLogin() {
+        fetch(`${API_BASE_URL}/login`).then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                loginDialog.showModal();
+            }
+        });
         const loginForm = document.getElementById('loginForm');
-        const email = localStorage.getItem('HUGGINGFACE_EMAIL');
-        const password = localStorage.getItem('HUGGINGFACE_PASSWD');
-
-        if (email && password) {
-            verifyCredentials(email, password);
-        } else {
-            loginDialog.showModal();
-        }
-
         loginForm.onsubmit = (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            localStorage.setItem('HUGGINGFACE_EMAIL', email);
-            localStorage.setItem('HUGGINGFACE_PASSWD', password);
             verifyCredentials(email, password);
         };
 
@@ -391,12 +386,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('登入成功');
                     loginDialog.close();
                 } else {
-                    alert('驗證失敗');
+                    alert(data.message || '驗證失敗');
                     loginDialog.showModal();
                 }
             })
             .catch(error => {
                 console.error('Error during login:', error);
+                alert('登入過程中發生錯誤，請稍後再試');
                 loginDialog.showModal();
             });
         }

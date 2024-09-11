@@ -57,10 +57,6 @@ def process_files():
         ga.start_processing()
         return jsonify({"success": True, "message": f"Execution id {process_id}"})
 
-@app.route('/api/record/<string:record_id>/toggle_mark', methods=['POST'])
-def toggle_record_mark(record_id):
-    return jsonify({"success": RECORD.toggle_mark(record_id)})
-
 @app.route('/api/pdf/<string:pdf_path>/<string:pdf_name>')
 def serve_pdf(pdf_path, pdf_name):
     pdf_dir = os.path.join('uploads', pdf_path)
@@ -71,23 +67,57 @@ def serve_pdf(pdf_path, pdf_name):
 def get_record_content(record_id):
     return render_template('index.html', record=RECORD.load_record(record_id))
 
+@app.route('/api/record/<string:record_id>/toggle_mark', methods=['POST'])
+def toggle_record_mark(record_id):
+    return jsonify({"success": RECORD.toggle_mark(record_id)})
+
+@app.route('/api/record/<string:record_id>/chat', methods=['GET'])
+def get_chat_record(record_id):
+    chat = RECORD.load_record(record_id)["chat"]
+    dialogue_system = HuggingChat.DialogueSystem(chat)
+    return jsonify(dialogue_system.parse_dialogue())
+
 @app.route('/api/record/<string:record_id>/chat', methods=['POST'])
 def get_record_chat(record_id):
-    message = request.json['message']
-    # 這裡應該是您的語言模型邏輯
     if len(RECORD.get_unprocessed_records()) > 0:
         return jsonify({'response': '模型正在執行中，請稍後再做嘗試。'})
-    response = f"這是對 '{record_id}': '{message}' 的模擬回覆。"
+    
+    message = request.json['message']
+    record = RECORD.load_record(record_id)
+    dialogue_system = HuggingChat.DialogueSystem(record["content"])
+    dialogue_system.dialogue += record["chat"]
+    ask = dialogue_system.ask_assistant(message)
+    response = H.chat(ask)
+    dialogue_system.add_assistant_message(response)
+    RECORD.edit_chat(record_id, dialogue_system.get_dialogue_without_system())
+    
     return jsonify({'response': response})
+
+@app.route('/api/login', methods=['GET'])
+def check_login():
+    logged_in = H.is_logged_in()
+    return jsonify({
+        "success": logged_in,
+        "message": "已登入" if logged_in else "未登入"
+    })
 
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
     email = data.get('email')
     password = data.get('password')
-    if H.login(email, password):
-        return jsonify({"success": True})
-    return jsonify({"success": False, "error": "Invalid credentials"}), 401
+    
+    if not email or not password:
+        return jsonify({
+            "success": False,
+            "message": "請提供郵箱和密碼"
+        }), 400
+    
+    success = H.login(email, password)
+    return jsonify({
+        "success": success,
+        "message": "登入成功" if success else "登入失敗，請檢查您的郵箱和密碼"
+    })
 
 @app.route('/api/upload/<string:folder_name>', methods=['GET'])
 def upload_folder(folder_name):

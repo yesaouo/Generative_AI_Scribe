@@ -17,7 +17,6 @@ class GeneticAlgorithm:
         self.probability = [float(r[1]) for r in keyphrase_result]
         self.sentences = [r[2] for r in keyphrase_result]
         self.article = ' '.join(list(set(self.sentences)))
-        self.chatbot.delete_all_conversations()
 
         # 印出基因演算法的參數
         print("=" * 50)
@@ -30,7 +29,6 @@ class GeneticAlgorithm:
         print("=" * 50)
 
     def __get_summarize(self, sentences):
-        self.chatbot.new_conversation(self.model_index)
         TEMPLATE = """
         <|im_start|>system
         You are a helpful assistant<|im_end|>
@@ -41,17 +39,15 @@ class GeneticAlgorithm:
         """
         sentences = '\n'.join(sentences)
         prompt = TEMPLATE.replace("{usr_msg}", sentences)
-        return self.chatbot.chat(prompt)
+        return self.chatbot.chat(prompt, self.model_index)
     
     def __get_zh_summarize(self, summarize):
-        self.chatbot.new_conversation(self.model_index)
         prompt = f"將底下的文章翻譯，不要做額外的回覆\n\n{summarize}"
-        return self.chatbot.chat(prompt)
+        return self.chatbot.chat(prompt, self.model_index)
     
     def __get_summarize_title(self, summarize):
-        self.chatbot.new_conversation(self.model_index)
         prompt = f"Give the article below a title without any additional replies.\n\n{summarize}"
-        return self.chatbot.chat(prompt)
+        return self.chatbot.chat(prompt, self.model_index)
 
     def __generate_random_sentence(self, sentences, probability):
         total = sum(probability)

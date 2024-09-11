@@ -202,6 +202,8 @@
     </div>
 
     <script>
+        const id = window.location.pathname.split('/').pop();
+        fetchChat();
         document.getElementById('chat-submit').addEventListener('click', sendMessage);
         document.getElementById('chat-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -209,11 +211,20 @@
             }
         });
 
+        function fetchChat() {
+            fetch(`/api/record/${id}/chat`).then(response => response.json())
+            .then(msgs => {
+                for (let msg of msgs) {
+                    if (msg.role !== 'system') {
+                        addMessage(msg.role, msg.message);
+                    }
+                }
+            });
+        }
+
         function sendMessage() {
             var input = document.getElementById('chat-input');
             var message = input.value;
-            let path = window.location.pathname;
-            let id = path.split('/').pop();
             if (message) {
                 addMessage('user', message);
                 fetch(`/api/record/${id}/chat`, {
