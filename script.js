@@ -422,6 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 console.log('上傳成功:', data.filename);
                 showSnackbar('success');
+                fetchFolders();
             } else {
                 throw new Error(data.error || '上傳失敗');
             }
@@ -455,7 +456,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error move File:', error);
-            showSnackbar('error');
+            showSnackbar('offline');
         });
     }
 
