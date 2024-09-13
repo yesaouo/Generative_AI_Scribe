@@ -3,7 +3,7 @@ from flask_cors import CORS
 import os, shutil, asyncio
 from datetime import datetime
 from Keyphrase import Keyword
-import Resource, Record, LLMChat, GeneticAlgorithm, QuestionGenerate
+import Resource, Record, LLMChat, GeneticAlgorithm
 
 os.makedirs('uploads', exist_ok=True)
 os.makedirs('resource', exist_ok=True)
@@ -85,10 +85,11 @@ def get_record_chat(record_id):
     DS.dialogue += record["chat"]
     ask = DS.ask_assistant(message)
     response = CA.chat(ask)
-    DS.add_assistant_message(response)
-    RM.edit_chat(record_id, DS.get_dialogue_without_system())
-    
-    return jsonify({'response': response})
+    if response != None:
+        DS.add_assistant_message(response)
+        RM.edit_chat(record_id, DS.get_dialogue_without_system())
+        return jsonify({'response': response})
+    return jsonify({'response': '⚠️ <strong>警告：</strong> 目前無法連接到 Ollama 後端，請稍後再試。'})
 
 @app.route('/api/record/<string:record_id>/quiz', methods=['GET'])
 def get_record_quiz(record_id):

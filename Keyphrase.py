@@ -1,7 +1,6 @@
 from transformers import AutoModelForTokenClassification, AutoTokenizer, TokenClassificationPipeline
 from transformers.pipelines import AggregationStrategy
-import torch
-import os, csv
+import torch, os, csv
 
 class Keyword():
 

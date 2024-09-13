@@ -11,148 +11,112 @@ class QuestionManager():
         shuffled = lst[:]
         random.shuffle(shuffled)
         return shuffled[:k]
-
+    
     def __process(self, Sentences, Template, Question_num):
-        Complexity = 5 # default
-        # random.sample() returns different elements
-        # random.choices() allows same elements
+        Complexity = 5  # 預設複雜度
         i = 0
         ls = []
-        while i < (Question_num):
 
-            # python 3.9之後的版本被刪了
-            #pick_up = random.sample(sentences, k=COMPLEXITY)
+        while i < Question_num:
+            # 隨機挑選句子組合
             pick_up = self.__select_unique_elements_shuffle(Sentences, Complexity)
-
             string_sentences = '\n'.join(str(p) for p in pick_up)
+            
+            # 構造聊天機器人輸入的 prompt
             prompt = Template.replace("{usr_msg}", string_sentences)
             response = self.chatbot.chat(prompt)
 
-            # Use regex to find all JSON-like objects
+            # 使用正則表達式匹配所有 JSON-like 的物件
             pattern = r'\{.*?\}'
-            response = response.replace('\n', '').replace('\'', '\"')
-            response = re.sub(r'\s+', ' ', response).strip()
+            response = response.replace('\n', '').replace('\'', '\"')  # 清理不必要的符號
+            response = re.sub(r'\s+', ' ', response).strip()  # 確保輸出乾淨
 
-            # matches is list and separate all {} element
+            # 匹配並獲取所有 JSON 物件
             matches = re.findall(pattern, response)
 
-            # Remove json element which does not contain attribute "question" and "answer"
+            # 檢查每個物件是否包含 "question" 和 "answer" 屬性
             try:
-                # Ensure matches is a list
+                # 確保 matches 是一個列表
                 if not isinstance(matches, list):
                     raise TypeError("Expected 'matches' to be a list.")
 
-                # Filter matches to include only those with both "question" and "answer"
+                # 過濾掉不包含 "question" 和 "answer" 的物件
                 filtered_matches = [m for m in matches if "\"question\"" in m and "\"answer\"" in m]
 
-                # Replace the original list with the filtered one
-                matches[:] = filtered_matches
+                # 如果有合法的 JSON，繼續處理
+                if filtered_matches:
+                    for match in filtered_matches:
+                        # 嘗試將 JSON 字符串轉換為 Python 字典
+                        try:
+                            json_obj = json.loads(match)
+                            ls.append(json_obj)
+                        except json.JSONDecodeError:
+                            print("Invalid JSON format found, skipping:", match)
+                else:
+                    print("No valid JSON objects found in response.")
+
+                i += 1  # 遞增計數器以生成下一個問題
             except TypeError as e:
                 print(f"Error: {e}")
             except Exception as e:
                 print(f"An unexpected error occurred: {e}")
 
-            # Transfer to json object
-            try:                
-                # Convert the list to a JSON string
-                json_string = json.dumps(matches, indent=2)  # 'indent' adds formatting for readability
-
-                ls.extend(json.loads(json_string))
-                i += 1
-            except Exception:
-                print("TF question not conform to JSON.")
-
         return ls
-
 
     def __generate(self, SENTENCES, request):
         sentences = list(set(SENTENCES))
 
+        # 定義一個通用模板函數來處理每種問題模板
+        def create_template(template_type, usr_msg):
+            return f"""
+            <|im_start|>system
+            You are a helpful assistant<|im_end|>
+            <|im_start|>user
+            You are a question generator. Please use the following keyword-sentence pairs to generate some {template_type} and return it in JSON format, enclosed in curly braces. Respond directly with only the abstract and do not include any additional commentary.
+            {usr_msg}<|im_end|>
+            <|im_start|>assistant
+            """
+
         # True or False questions
-        TF_template = \
-        """
-        <|im_start|>system
-        You are a helpful assistant<|im_end|>
-        <|im_start|>user
-        You are a question generator. Please use the following keyword-sentence pairs to generate some true or false question and provide the answer in JSON format with the attributes are "question" and "answer" respectively, enclosed in curly braces. Respond directly with only the abstract and do not include any additional commentary.
-        {usr_msg}<|im_end|>
-        <|im_start|>assistant
-        """
-        TF_q = self.__process(sentences, TF_template, request["TF"])
+        TF_template = create_template(
+            "true or false question and provide the answer with the attributes 'question' and 'answer'",
+            request["TF"]
+        )
+        TF_q = self.__process(sentences, TF_template)
 
+        # Multiple-choice questions
+        CH_template = create_template(
+            "multiple-choice question with 4 options. The JSON should include 'question', 'choices', and 'answer'",
+            request["Choose"]
+        )
+        CH_q = self.__process(sentences, CH_template)
 
-        # Choosen questions
-        CH_template = \
-        """
-        <|im_start|>system
-        You are a helpful assistant<|im_end|>
-        <|im_start|>user
-        You are a question generator. Please use the following keyword-sentence pairs to generate some multiple-choice question with 4 options and return it in JSON format, enclosed in curly braces. The JSON should include the following attributes: 'question', 'choices', and 'answer'. The 'choices' attribute should be an array containing the four options. Respond directly with only the abstract and do not include any additional commentary.
-        {usr_msg}<|im_end|>
-        <|im_start|>assistant
-        """
-        CH_q = self.__process(sentences, CH_template, request["Choose"])
+        # Fill-in-the-blank questions
+        BK_template = create_template(
+            "fill-in-the-blank question and provide the answer with the attributes 'question' and 'answer'",
+            request["Blank"]
+        )
+        BK_q = self.__process(sentences, BK_template)
 
+        # Short answer questions
+        QA_template = create_template(
+            "short answer question and provide the answer with the attributes 'question' and 'answer'",
+            request["QA"]
+        )
+        QA_q = self.__process(sentences, QA_template)
 
-        # Fill blank questions
-        BK_template = \
-        """
-        <|im_start|>system
-        You are a helpful assistant<|im_end|>
-        <|im_start|>user
-        You are a question generator. Please use the following keyword-sentence pairs to generate some fill-in-the-blank question and provide the answer in JSON format with the attributes are "question" and "answer" respectively, enclosed in curly braces. Respond directly with only the abstract and do not include any additional commentary.
-        {usr_msg}<|im_end|>
-        <|im_start|>assistant
-        """
-        BK_q = self.__process(sentences, BK_template, request["Blank"])
-
-
-        # Question Answer questions
-        QA_template = \
-        """
-        <|im_start|>system
-        You are a helpful assistant<|im_end|>
-        <|im_start|>user
-        You are a question generator. Please use the following keyword-sentence pairs to generate some short answer question and provide the answer in JSON format with the attributes are "question" and "answer" respectively, enclosed in curly braces. Respond directly with only the abstract and do not include any additional commentary.
-        {usr_msg}<|im_end|>
-        <|im_start|>assistant
-        """
-        QA_q = self.__process(sentences, QA_template, request["QA"])
-        
-        
+        # 最終的 JSON 結構
         final_structure = {
-            "TF": TF_q,  # First sublist
-            "CH": CH_q,  # Second sublist
-            "BK": BK_q,  # Third sublist
-            "QA": QA_q   # Fouth sublist
+            "TF": TF_q,   # True/False
+            "CH": CH_q,   # Multiple-choice
+            "BK": BK_q,   # Fill-in-the-blank
+            "QA": QA_q    # Short answer
         }
 
-        # Convert the final structure to a JSON formatted string
+        # 將結果轉換為格式化的 JSON 字符串
         json_output = json.dumps(final_structure, indent=4, ensure_ascii=False)
-        json_output = json_output.replace('\\\"', '').replace("\"", '')
 
         return json_output
-    
-
-    def run(self, folder, file_name):
-
-        # 讀取 CSV 文件
-        with open(f"resource\\{folder}\\{file_name}\\{file_name}_keyphrase.csv", mode='r', encoding="utf-8") as file:
-            reader = csv.reader(file)  # 使用 csv.reader 讀取 CSV 文件
-            header = next(reader)  # 讀取並跳過表頭
-            data = [tuple(row) for row in reader]  # 將每一行轉換為元組並儲存到列表中
-
-        X = [(r[0], r[2]) for r in data]
-
-        # Default numbers
-        req = {
-            "TF": 8,
-            "Choose": 9,
-            "Blank": 6,
-            "QA": 4
-        }
-
-        return self.__generate(X, req)
     
     def get_json(self, sentences):
         req = {
