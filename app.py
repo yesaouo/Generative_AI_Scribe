@@ -73,8 +73,9 @@ def toggle_record_mark(record_id):
 
 @app.route('/api/record/<string:record_id>/chat', methods=['GET'])
 def get_chat_record(record_id):
-    chat = RM.load_record(record_id)["chat"]
-    DS = LLMChat.DialogueSystem(chat)
+    record = RM.load_record(record_id)
+    DS = LLMChat.DialogueSystem(record["content"])
+    DS.dialogue += record["chat"]
     return jsonify(DS.parse_dialogue())
 
 @app.route('/api/record/<string:record_id>/chat', methods=['POST'])
