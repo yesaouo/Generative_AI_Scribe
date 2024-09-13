@@ -1,6 +1,7 @@
 import random, math, time, threading
 import numpy as np
 from adaptive_semantic_similarity import AggregateEmbeddings
+from QuestionGenerate import QuestionManager
 from Record import RecordManager
 
 class GeneticAlgorithm:
@@ -144,9 +145,12 @@ class GeneticAlgorithm:
         title = self.__get_summarize_title(best_response)
         content = best_response
         zh_content = self.__get_zh_summarize(best_response)
+        
+        QM = QuestionManager(self.chatbot)
+        quiz = QM.get_json(self.sentences)
 
-        manager = RecordManager()
-        manager.edit_record(self.process_id, title, content, zh_content)
+        RM = RecordManager()
+        RM.edit_record(self.process_id, title, content, zh_content, quiz)
 
         # 計算並印出總執行時間
         end_time = time.time()

@@ -14,10 +14,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const createFolderBtn = document.getElementById('createFolderBtn');
     const deleteBtn = document.getElementById('deleteBtn');
     const fileInput = document.getElementById('fileInput');
-    const loginDialog = document.getElementById('loginDialog');
     const settingsDialog = document.getElementById('settingsDialog');
     const settingsContent = document.getElementById('settingsContent');
-    const changeAccountBtn = document.getElementById('changeAccountBtn');
     const closeBackendBtn = document.getElementById('closeBackendBtn');
     const settingsCloseBtn = document.getElementById('settingsCloseBtn');
     const snackbar = document.getElementById("snackbar");
@@ -37,12 +35,6 @@ document.addEventListener('DOMContentLoaded', function() {
         settingsDialog.showModal();
     });
 
-    changeAccountBtn.onclick = (e) => {
-        localStorage.removeItem('HUGGINGFACE_EMAIL');
-        localStorage.removeItem('HUGGINGFACE_PASSWD');
-        settingsDialog.close();
-        loginDialog.showModal();
-    };
     settingsCloseBtn.addEventListener('click', () => {
         settingsDialog.close();
     });
@@ -95,7 +87,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    initLogin();
     fetchFolders();
     fetchRecords();
   
@@ -357,47 +348,6 @@ document.addEventListener('DOMContentLoaded', function() {
         progressText.textContent = `文件處理進度: ${value}/${max}`;
     }
 
-    function initLogin() {
-        fetch(`${API_BASE_URL}/login`).then(response => response.json())
-        .then(data => {
-            if (!data.success) {
-                loginDialog.showModal();
-            }
-        });
-        const loginForm = document.getElementById('loginForm');
-        loginForm.onsubmit = (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            verifyCredentials(email, password);
-        };
-
-        function verifyCredentials(email, password) {
-            fetch(`${API_BASE_URL}/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('登入成功');
-                    loginDialog.close();
-                } else {
-                    alert(data.message || '驗證失敗');
-                    loginDialog.showModal();
-                }
-            })
-            .catch(error => {
-                console.error('Error during login:', error);
-                alert('登入過程中發生錯誤，請稍後再試');
-                loginDialog.showModal();
-            });
-        }
-    }
-
     function uploadFolder(folderName) {
         fetch(`${API_BASE_URL}/upload/${folderName}`).then(response => response.json())
         .catch(error => console.error('Error upload Folders:', error));
@@ -412,12 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             body: formData
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
             if (data.success) {
                 console.log('上傳成功:', data.filename);
@@ -450,6 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 console.log('移動成功:', data.filename);
+                fetchFolders();
             } else {
                 throw new Error(data.error || '移動失敗');
             }
@@ -470,8 +416,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 console.log('Folder deleted successfully');
+                fetchFolders();
             } else {
-                console.error('Failed to delete folder');
+                throw new Error(data.error || '刪除失敗');
             }
         }).catch(error => {
             console.error('Error delete Folder:', error);
@@ -489,8 +436,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 console.log('File deleted successfully');
+                fetchFolders();
             } else {
-                console.error('Failed to delete file');
+                throw new Error(data.error || '刪除失敗');
             }
         }).catch(error => {
             console.error('Error delete File:', error);

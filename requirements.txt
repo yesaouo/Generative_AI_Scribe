@@ -4,5 +4,3 @@ numpy==1.26.4
 marker-pdf==0.2.16
 googletrans==3.1.0a0
 transformers
-hugchat
-python-dotenv
