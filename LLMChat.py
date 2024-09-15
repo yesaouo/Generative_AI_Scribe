@@ -3,28 +3,44 @@ import requests, json, re
 class ChatAPI:
     def __init__(self, host=None):
         self.host = host if host is not None else "http://localhost:11434"
-        self.models = self.fetch_models()  # 從 API 獲取模型名稱
+        self.models = []
+
+    def check_backend(self, ignore_check=False):
+        if ignore_check:
+            print("警告：忽略 Ollama 後端檢查。")
+            print("請注意：")
+            print("1. 某些依賴於 Ollama 後端的功能可能無法正常工作。")
+            print("2. 如果遇到與模型或 API 相關的錯誤，請確保 Ollama 後端已正確配置並運行。")
+            print("3. 在生產環境中，建議啟用後端檢查以確保系統穩定性。")
+            return True
+
+        self.models = self.fetch_models()
+        if not self.models:
+            print("警告：沒有可用的模型。請確保已安裝模型或 Ollama 後端已啟動。")
+            print("如果要忽略此檢查，請使用 --ignore-backend-check 參數。")
+            return False
+        return True
 
     def fetch_models(self):
-        # 從指定的 host 獲取模型數據
         api_url = f"{self.host}/api/tags"
         try:
             response = requests.get(api_url)
             if response.status_code == 200:
                 data = response.json()
-                # 提取所有模型的名稱
                 model_names = [model["name"] for model in data.get("models", [])]
-                return model_names if model_names else ["default_model"]
+                return model_names if model_names else []
             else:
                 print(f"Error fetching models: {response.status_code}")
-                return ["default_model"]
+                return []
         except requests.exceptions.RequestException as e:
             print(f"Request failed: {e}")
-            return ["default_model"]
+            return []
 
     def chat(self, prompt, model_index=0, num_ctx=2048):
-        # 構建要發送的數據
-        api_url = f"{self.host}/api/generate"  # 根據 host 構建完整的 API 路徑
+        if len(self.models) < 1:
+            return
+        
+        api_url = f"{self.host}/api/generate"
         data = {
             "model": self.models[model_index],
             "prompt": prompt,
@@ -34,7 +50,6 @@ class ChatAPI:
             }
         }
 
-        # 發送 POST 請求
         try:
             response = requests.post(api_url, data=json.dumps(data), headers={"Content-Type": "application/json"})
             if response.status_code == 200:

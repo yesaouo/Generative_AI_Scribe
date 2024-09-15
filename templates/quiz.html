@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>題目頁面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        #start-screen p {
+            font-size: 20px;
+            font-weight: bold;
+            color: #444;
+        }
+        #start-btn, #restart-btn {
+            padding: 15px 30px;
+            font-size: 20px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+        #start-btn:hover, #restart-btn:hover {
+            background-color: #45a049;
+        }
+        #question-number {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        #question {
+            margin-top: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        #answer-section {
+            margin-top: 20px;
+        }
+        #answer-input {
+            padding: 10px;
+            font-size: 18px;
+            margin: 5px;
+            width: 60%;
+            max-width: 300px;
+        }
+        .btn-choice {
+            padding: 10px 20px;
+            font-size: 18px;
+            margin: 5px;
+            background-color: #008CBA;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .btn-choice:hover {
+            background-color: #007B9A;
+        }
+        #submit-btn, #next-btn {
+            padding: 10px 20px;
+            font-size: 18px;
+            margin: 10px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #submit-btn:hover, #next-btn:hover {
+            background-color: #d32f2f;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .correct {
+            color: #4caf50;
+        }
+        .incorrect {
+            color: #f44336;
+        }
+        .great {
+            color: #2196F3;
+        }
+        #quiz-section, #end-screen {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="start-screen">
+        <h1>歡迎來到測驗</h1>
+        <p>總共有 <span id="total-questions"></span> 題</p>
+        <button id="start-btn" onclick="startQuiz()">開始測驗</button>
+    </div>
+
+    <div id="quiz-section" style="display:none;">
+        <div id="question-number"></div>
+        <div id="question">題目載入中...</div>
+        <div id="answer-section">
+            <div id="tf-buttons" style="display:none;">
+                <button class="btn-choice" onclick="submitAnswer('True')">O</button>
+                <button class="btn-choice" onclick="submitAnswer('False')">X</button>
+            </div>
+            <div id="mc-buttons" style="display:none;">
+                <button class="btn-choice" onclick="submitAnswer('A')">A.<span id="choice-1"></span></button>
+                <button class="btn-choice" onclick="submitAnswer('B')">B.<span id="choice-2"></span></button>
+                <button class="btn-choice" onclick="submitAnswer('C')">C.<span id="choice-3"></span></button>
+                <button class="btn-choice" onclick="submitAnswer('D')">D.<span id="choice-4"></span></button>
+            </div>
+            <div id="text-input-section" style="display:none;">
+                <input type="text" id="answer-input" placeholder="輸入答案">
+                <button id="submit-btn" onclick="submitAnswer()">送出答案</button>
+            </div>
+        </div>
+        <div id="result"></div>
+        <button id="next-btn" onclick="nextQuestion()" style="display:none;">下一題</button>
+    </div>
+
+    <div id="end-screen" style="display:none;">
+        <h2>測驗結束！</h2>
+        <p id="final-score"></p>
+        <button id="restart-btn" onclick="resetQuiz()">重新測驗</button>
+    </div>
+
+    <script>
+        var questions = {{ questions | tojson }};
+        const categoryOrder = ["TF", "CH", "BK", "QA"];
+        let currentCategoryIndex = 0;
+        let currentQuestionIndex = 0;
+        let correctAnswer = '';
+        let correctCount = 0;
+        let totalQuestions = 0;
+        let currentQuestionNumber = 1;
+
+        function getTotalQuestions() {
+            categoryOrder.forEach(category => {
+                totalQuestions += questions[category].length;
+            });
+            return totalQuestions;
+        }
+
+        window.onload = function() {
+            document.getElementById('total-questions').innerText = getTotalQuestions();
+            document.getElementById('start-screen').style.display = 'block';
+        };
+
+        function startQuiz() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('quiz-section').style.display = 'block';
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            let currentCategory = categoryOrder[currentCategoryIndex];
+            let questionData = questions[currentCategory][currentQuestionIndex];
+            document.getElementById('question-number').innerText = `第 ${currentQuestionNumber} 題 / 共 ${totalQuestions} 題`;
+            document.getElementById('question').innerText = questionData.question;
+            correctAnswer = questionData.answer;
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('next-btn').style.display = 'none';
+
+            if (currentCategory === 'TF') {
+                showTFButtons();
+            } else if (currentCategory === 'CH') {
+                showMCButtons(questionData.choices);
+            } else {
+                showTextInput();
+            }
+        }
+
+        function showTFButtons() {
+            document.getElementById('tf-buttons').style.display = 'block';
+            document.getElementById('mc-buttons').style.display = 'none';
+            document.getElementById('text-input-section').style.display = 'none';
+        }
+
+        function showMCButtons(choices) {
+            document.getElementById('tf-buttons').style.display = 'none';
+            document.getElementById('mc-buttons').style.display = 'block';
+            document.getElementById('text-input-section').style.display = 'none';
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById(`choice-${i}`).innerText = choices[i-1];
+            }
+        }
+
+        function showTextInput() {
+            document.getElementById('tf-buttons').style.display = 'none';
+            document.getElementById('mc-buttons').style.display = 'none';
+            document.getElementById('text-input-section').style.display = 'block';
+            document.getElementById('answer-input').value = '';
+        }
+
+        function submitAnswer(answer) {
+            const userAnswer = answer || document.getElementById('answer-input').value.trim();
+            const resultDiv = document.getElementById('result');
+            if (userAnswer === correctAnswer) {
+                correctCount++;
+                resultDiv.innerHTML = '<span class="correct">✔️ 恭喜你，答案正確！</span>';
+            } else {
+                resultDiv.innerHTML = `<span class="incorrect">❗ 答案錯誤，正確答案是：${correctAnswer}</span>`;
+            }
+            document.getElementById('next-btn').style.display = 'block';
+        }
+
+        function nextQuestion() {
+            currentQuestionNumber++;
+            let currentCategory = categoryOrder[currentCategoryIndex];
+            if (currentQuestionIndex < questions[currentCategory].length - 1) {
+                currentQuestionIndex++;
+            } else if (currentCategoryIndex < categoryOrder.length - 1) {
+                currentQuestionIndex = 0;
+                currentCategoryIndex++;
+            } else {
+                showFinalResult();
+                return;
+            }
+            loadQuestion();
+        }
+
+        function showFinalResult() {
+            document.getElementById('quiz-section').style.display = 'none';
+            document.getElementById('end-screen').style.display = 'block';
+            document.getElementById('final-score').innerHTML = `<span class="great">你答對了 ${correctCount} 題，共 ${totalQuestions} 題。</span>`;
+        }
+
+        function resetQuiz() {
+            currentCategoryIndex = 0;
+            currentQuestionIndex = 0;
+            correctCount = 0;
+            currentQuestionNumber = 1;
+            document.getElementById('end-screen').style.display = 'none';
+            startQuiz();
+        }
+    </script>
+</body>
+</html>

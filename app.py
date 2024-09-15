@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
-import os, shutil, asyncio
+import os, sys, argparse
 from datetime import datetime
 from Keyphrase import Keyword
 import Resource, Record, LLMChat, GeneticAlgorithm
@@ -11,11 +11,19 @@ os.makedirs('records', exist_ok=True)
 
 app = Flask(__name__)
 CORS(app)  # 啟用CORS以允許前端跨域請求
+
+parser = argparse.ArgumentParser(description="Chat application")
+parser.add_argument("--host", type=str, default="http://localhost:11434", help="Ollama host URL")
+parser.add_argument("--ignore-backend-check", action="store_true", help="忽略 Ollama 後端檢查")
+args = parser.parse_args()
+CA = LLMChat.ChatAPI(host=args.host)
+if not CA.check_backend(args.ignore_backend_check):
+    sys.exit(1)
+
 FP = Resource.FileProcessor()
 RM = Record.RecordManager()
 FP.start_processing()
 RM.delete_unprocessed_records()
-CA = LLMChat.ChatAPI()
 
 @app.route('/api/records', methods=['GET'])
 def get_records():
@@ -95,8 +103,7 @@ def get_record_chat(record_id):
 @app.route('/api/record/<string:record_id>/quiz', methods=['GET'])
 def get_record_quiz(record_id):
     record = RM.load_record(record_id)
-    print(record["quiz"])
-    return jsonify({'response': record["quiz"]})
+    return render_template('quiz.html', questions=record["quiz"])
 
 @app.route('/api/upload/<string:folder_name>', methods=['GET'])
 def upload_folder(folder_name):
@@ -124,13 +131,13 @@ def move_file():
     file_name = data.get('file_name')
     return jsonify({"success": FP.move_file(folder, new_folder, file_name)})
 
-@app.route('/api/folder', methods=['DELETE'])
+@app.route('/api/delete/folder', methods=['DELETE'])
 def delete_folder():
     data = request.json
     folder = data.get('folder')
     return jsonify({"success": FP.delete_folder(folder)})
 
-@app.route('/api/delete', methods=['DELETE'])
+@app.route('/api/delete/file', methods=['DELETE'])
 def delete_file():
     data = request.json
     folder = data.get('folder')

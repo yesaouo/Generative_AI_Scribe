@@ -407,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function deleteFolder(folder) {
-        fetch(`${API_BASE_URL}/folder`, {
+        fetch(`${API_BASE_URL}/delete/folder`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ folder: folder }),
@@ -427,7 +427,7 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     function deleteFile(folder, fileName) {
-        fetch(`${API_BASE_URL}/delete`, {
+        fetch(`${API_BASE_URL}/delete/file`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ folder: folder, file_name: fileName }),
