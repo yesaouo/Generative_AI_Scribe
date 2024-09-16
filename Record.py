@@ -15,7 +15,7 @@ class RecordManager:
     def sort_records(self):
         records = self.load_records()
         records.sort(key=lambda x: (
-            x.get('title') != '' and x.get('content') != '' and x.get('zh_content') != '' and x.get('quiz') != '',  # 未完成的放前面
+            x.get('title') != '' and x.get('content') != '' and x.get('zh_content') != '' and x.get('quiz') != '' and x.get('exe_time') != '',  # 未完成的放前面
             not x.get('isMark', False),  # 標記的放第二
             x.get('id')  # 最後按 ID 排序
         ))
@@ -23,9 +23,9 @@ class RecordManager:
 
     def get_unprocessed_records(self):
         records = self.load_records()
-        return [record for record in records if not record.get('title') or not record.get('content') or not record.get('zh_content') or not record.get('quiz')]
+        return [record for record in records if not record.get('title') or not record.get('content') or not record.get('zh_content') or not record.get('quiz') or not record.get('exe_time')]
 
-    def edit_record(self, id, title=None, content=None, zh_content=None, quiz=None):
+    def edit_record(self, id, title=None, content=None, zh_content=None, quiz=None, exe_time=None):
         records = self.load_records()
         for record in records:
             if record['id'] == id:
@@ -37,6 +37,8 @@ class RecordManager:
                     record['zh_content'] = zh_content
                 if quiz:
                     record['quiz'] = quiz
+                if exe_time:
+                    record['exe_time'] = exe_time
                 self.save_record(record)
                 return True
         return False
@@ -77,6 +79,7 @@ class RecordManager:
             "content": "",
             "zh_content": "",
             "quiz": "",
+            "exe_time": "",
             "chat": ""
         }
         self.save_record(new_record)

@@ -147,15 +147,14 @@ class GeneticAlgorithm:
         zh_content = self.__get_zh_summarize(best_response)
         
         QM = QuestionManager(self.chatbot)
-        quiz = QM.get_json(self.sentences)
+        quiz = QM.get_quiz(self.sentences)
 
-        RM = RecordManager()
-        RM.edit_record(self.process_id, title, content, zh_content, quiz)
-
-        # 計算並印出總執行時間
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"Total Execution Time: {elapsed_time:.2f} seconds.")
+
+        RM = RecordManager()
+        RM.edit_record(self.process_id, title, content, zh_content, quiz, elapsed_time)
     
     def start_processing(self):
         thread = threading.Thread(target=self.run)

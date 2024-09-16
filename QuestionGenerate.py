@@ -63,11 +63,11 @@ class QuestionManager():
 
         return ls
 
-    def __generate(self, SENTENCES, request):
-        sentences = list(set(SENTENCES))
+    def __generate(self, sentences, request):
+        sentences = list(set(sentences))
 
         # 定義一個通用模板函數來處理每種問題模板
-        def create_template(template_type, usr_msg):
+        def create_template(template_type, usr_msg="{usr_msg}"):
             return f"""
             <|im_start|>system
             You are a helpful assistant<|im_end|>
@@ -78,32 +78,20 @@ class QuestionManager():
             """
 
         # True or False questions
-        TF_template = create_template(
-            "true or false question and provide the answer with the attributes 'question' and 'answer'",
-            request["TF"]
-        )
-        TF_q = self.__process(sentences, TF_template)
+        TF_template = create_template("true or false question and provide the answer with the attributes 'question' and 'answer'")
+        TF_q = self.__process(sentences, TF_template, request["TF"])
 
         # Multiple-choice questions
-        CH_template = create_template(
-            "multiple-choice question with 4 options. The JSON should include 'question', 'choices', and 'answer'",
-            request["Choose"]
-        )
-        CH_q = self.__process(sentences, CH_template)
+        CH_template = create_template("multiple-choice question with 4 options. The JSON should include 'question', 'choices', and 'answer'")
+        CH_q = self.__process(sentences, CH_template, request["Choose"])
 
         # Fill-in-the-blank questions
-        BK_template = create_template(
-            "fill-in-the-blank question and provide the answer with the attributes 'question' and 'answer'",
-            request["Blank"]
-        )
-        BK_q = self.__process(sentences, BK_template)
+        BK_template = create_template("fill-in-the-blank question and provide the answer with the attributes 'question' and 'answer'")
+        BK_q = self.__process(sentences, BK_template, request["Blank"])
 
         # Short answer questions
-        QA_template = create_template(
-            "short answer question and provide the answer with the attributes 'question' and 'answer'",
-            request["QA"]
-        )
-        QA_q = self.__process(sentences, QA_template)
+        QA_template = create_template("short answer question and provide the answer with the attributes 'question' and 'answer'")
+        QA_q = self.__process(sentences, QA_template, request["QA"])
 
         # 最終的 JSON 結構
         final_structure = {
@@ -113,17 +101,14 @@ class QuestionManager():
             "QA": QA_q    # Short answer
         }
 
-        # 將結果轉換為格式化的 JSON 字符串
-        json_output = json.dumps(final_structure, indent=4, ensure_ascii=False)
-
-        return json_output
+        return final_structure
     
-    def get_json(self, sentences):
+    def get_quiz(self, sentences):
         req = {
-            "TF": 8,
-            "Choose": 9,
-            "Blank": 6,
-            "QA": 4
+            "TF": 3,
+            "Choose": 3,
+            "Blank": 3,
+            "QA": 3
         }
 
         return self.__generate(sentences, req)
