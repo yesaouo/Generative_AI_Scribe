@@ -150,17 +150,23 @@
         let correctAnswer = '';
         let correctCount = 0;
         let totalQuestions = 0;
-        let currentQuestionNumber = 1;
+        let currentQuestionNumber = 0;
 
         function getTotalQuestions() {
+            let total = 0;
             categoryOrder.forEach(category => {
-                totalQuestions += questions[category].length;
+                if (category === "TF") {
+                    total += questions[category].filter(q => typeof q.answer === 'boolean').length;
+                } else {
+                    total += questions[category].length;
+                }
             });
-            return totalQuestions;
+            return total;
         }
 
         window.onload = function() {
-            document.getElementById('total-questions').innerText = getTotalQuestions();
+            totalQuestions = getTotalQuestions();
+            document.getElementById('total-questions').innerText = totalQuestions;
             document.getElementById('start-screen').style.display = 'block';
         };
 
@@ -173,6 +179,14 @@
         function loadQuestion() {
             let currentCategory = categoryOrder[currentCategoryIndex];
             let questionData = questions[currentCategory][currentQuestionIndex];
+
+            // 如果是非題且答案不是布爾值，跳到下一題
+            if (currentCategory === 'TF' && typeof questionData.answer !== 'boolean') {
+                nextQuestion();
+                return;
+            }
+
+            currentQuestionNumber++;
             document.getElementById('question-number').innerText = `第 ${currentQuestionNumber} 題 / 共 ${totalQuestions} 題`;
             document.getElementById('question').innerText = questionData.question;
             correctAnswer = questionData.answer;
@@ -213,7 +227,7 @@
         function submitAnswer(answer) {
             const userAnswer = answer || document.getElementById('answer-input').value.trim();
             const resultDiv = document.getElementById('result');
-            if (userAnswer === correctAnswer) {
+            if (userAnswer.toString().toLowerCase() === correctAnswer.toString().toLowerCase()) {
                 correctCount++;
                 resultDiv.innerHTML = '<span class="correct">✔️ 恭喜你，答案正確！</span>';
             } else {
@@ -223,17 +237,22 @@
         }
 
         function nextQuestion() {
-            currentQuestionNumber++;
             let currentCategory = categoryOrder[currentCategoryIndex];
-            if (currentQuestionIndex < questions[currentCategory].length - 1) {
-                currentQuestionIndex++;
-            } else if (currentCategoryIndex < categoryOrder.length - 1) {
+            currentQuestionIndex++;
+
+            // 如果當前類別的問題已經用完，移到下一個類別
+            while (currentQuestionIndex >= questions[currentCategory].length) {
                 currentQuestionIndex = 0;
                 currentCategoryIndex++;
-            } else {
-                showFinalResult();
-                return;
+
+                // 如果所有類別都用完了，結束測驗
+                if (currentCategoryIndex >= categoryOrder.length) {
+                    showFinalResult();
+                    return;
+                }
+                currentCategory = categoryOrder[currentCategoryIndex];
             }
+
             loadQuestion();
         }
 
@@ -247,7 +266,7 @@
             currentCategoryIndex = 0;
             currentQuestionIndex = 0;
             correctCount = 0;
-            currentQuestionNumber = 1;
+            currentQuestionNumber = 0;
             document.getElementById('end-screen').style.display = 'none';
             startQuiz();
         }

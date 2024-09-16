@@ -88,6 +88,8 @@ def get_chat_record(record_id):
 
 @app.route('/api/record/<string:record_id>/chat', methods=['POST'])
 def get_record_chat(record_id):
+    if len(RM.get_unprocessed_records()) > 0:
+        return jsonify({'response': '⚠️ <strong>警告：</strong> 語言模型正在使用，請稍後再試。'})
     message = request.json['message']
     record = RM.load_record(record_id)
     DS = LLMChat.DialogueSystem(record["content"])
