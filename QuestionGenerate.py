@@ -81,9 +81,42 @@ class QuestionManager():
         TF_template = create_template("true or false question and provide the answer with the attributes 'question' and 'answer'")
         TF_q = self.__process(sentences, TF_template, request["TF"])
 
+        # 檢查answer格式並處理
+        valid_TF_q = []
+        for item in TF_q:
+            answer = item.get("answer")
+            if isinstance(answer, bool):
+                valid_TF_q.append(item)
+            elif isinstance(answer, str) and answer.lower() in ["true", "false"]:
+                item["answer"] = answer.lower() == "true"  # 轉成布林值
+                valid_TF_q.append(item)
+
+        TF_q = valid_TF_q  # 更新TF_q
+
         # Multiple-choice questions
         CH_template = create_template("multiple-choice question with 4 options. The JSON should include 'question', 'choices', and 'answer'")
         CH_q = self.__process(sentences, CH_template, request["Choose"])
+
+        # 檢查answer格式並處理
+        valid_CH_q = []
+        for item in CH_q:
+            answer = item.get("answer")
+            choices = item.get("choices", [])
+            
+            if isinstance(answer, int) and 1 <= answer <= len(choices):
+                # 如果 answer 是有效範圍內的數字
+                valid_CH_q.append(item)
+            elif isinstance(answer, str):
+                try:
+                    # 如果 answer 是字串且存在於 choices 中，將其轉為索引 + 1
+                    index = choices.index(answer) + 1
+                    item["answer"] = index
+                    valid_CH_q.append(item)
+                except ValueError:
+                    # answer 不在 choices 中，則跳過此項目
+                    continue
+
+        CH_q = valid_CH_q  # 更新CH_q
 
         # Fill-in-the-blank questions
         BK_template = create_template("fill-in-the-blank question and provide the answer with the attributes 'question' and 'answer'")
@@ -106,9 +139,9 @@ class QuestionManager():
     def get_quiz(self, sentences):
         req = {
             "TF": 3,
-            "Choose": 3,
-            "Blank": 3,
-            "QA": 3
+            "Choose": 2,
+            "Blank": 2,
+            "QA": 2
         }
 
         return self.__generate(sentences, req)
