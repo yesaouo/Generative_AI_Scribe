@@ -30,20 +30,12 @@ class GeneticAlgorithm:
         print("=" * 50)
 
     def __get_summarize(self, sentences):
-        TEMPLATE = """
-        <|im_start|>system
-        You are a helpful assistant<|im_end|>
-        <|im_start|>user
-        You are an article generator. Please generate an original abstract based on the following sentences. Ensure that the abstract is direct, clear, and confident. Respond directly with only the abstract and do not include any additional commentary.
-        {usr_msg}<|im_end|>
-        <|im_start|>assistant
-        """
-        sentences = '\n'.join(sentences)
-        prompt = TEMPLATE.replace("{usr_msg}", sentences)
+        content = "\n".join(["{}. {}".format(i + 1, item.replace('\n', ' ')) for i, item in enumerate(sentences)])
+        prompt = f"Organize the following content into a complete article.\n\n{content}"
         return self.chatbot.chat(prompt, self.model_index)
     
     def __get_zh_summarize(self, summarize):
-        prompt = f"將底下的文章翻譯，不要做額外的回覆\n\n{summarize}"
+        prompt = f"將底下的文章翻譯，不要做額外的回覆。\n\n{summarize}"
         return self.chatbot.chat(prompt, self.model_index)
     
     def __get_summarize_title(self, summarize):
