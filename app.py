@@ -73,7 +73,7 @@ def serve_pdf(pdf_path, pdf_name):
 
 @app.route('/api/record/<string:record_id>', methods=['GET'])
 def get_record_content(record_id):
-    return render_template('index.html', record=RM.load_record(record_id))
+    return render_template('record.html', record=RM.load_record(record_id))
 
 @app.route('/api/record/<string:record_id>/toggle_mark', methods=['POST'])
 def toggle_record_mark(record_id):

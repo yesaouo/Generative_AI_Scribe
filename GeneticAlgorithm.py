@@ -35,12 +35,12 @@ class GeneticAlgorithm:
         return self.chatbot.chat(prompt, self.model_index)
     
     def __get_zh_summarize(self, summarize):
-        prompt = f"將底下的文章翻譯，不要做額外的回覆。\n\n{summarize}"
-        return self.chatbot.chat(prompt, self.model_index)
+        prompt = f"Translate the following article content into Traditional Chinese, without any additional information.\n\n{summarize}"
+        return self.chatbot.chat(prompt, self.model_index, 0)
     
     def __get_summarize_title(self, summarize):
-        prompt = f"Give the article below a title without any additional replies.\n\n{summarize}"
-        return self.chatbot.chat(prompt, self.model_index)
+        prompt = f"Based on the following content, generate a title only, with no additional text or information.\n\n{summarize}"
+        return self.chatbot.chat(prompt, self.model_index, 0)
 
     def __generate_random_sentence(self, sentences, probability):
         total = sum(probability)

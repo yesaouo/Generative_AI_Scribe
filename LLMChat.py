@@ -36,7 +36,7 @@ class ChatAPI:
             print(f"Request failed: {e}")
             return []
 
-    def chat(self, prompt, model_index=0, num_ctx=2048):
+    def chat(self, prompt, model_index=0, num_ctx=2048, temperature=0.1):
         if len(self.models) < 1:
             return
         
@@ -46,14 +46,15 @@ class ChatAPI:
             "prompt": prompt,
             "stream": False,
             "options": {
-                "num_ctx": num_ctx
+                "num_ctx": num_ctx,
+                "temperature": temperature
             }
         }
 
         try:
             response = requests.post(api_url, data=json.dumps(data), headers={"Content-Type": "application/json"})
             if response.status_code == 200:
-                return response.json().get("response", "No response found")
+                return response.json().get("response", "No response found").strip()
             else:
                 print(f"Error: {response.status_code}, {response.text}")
         except requests.exceptions.RequestException as e:

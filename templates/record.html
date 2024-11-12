@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文章摘要與聊天室</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/record.css') }}">
+    <script src="{{ url_for('static', filename='js/marked.min.js') }}"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <div class="left-panel">
+                <ul>
+                    <h2>PDF 文件列表</h2>
+                    {% for pdf in record.pdfs %}
+                    <li><a href="/api/pdf/{{ pdf.path }}/{{ pdf.name }}" target="_blank">{{ pdf.name }}</a></li>
+                    {% endfor %}
+                </ul>
+
+                <div id="summary-container">
+                    <h2>文章摘要</h2>
+                    <div class="lang-toggle" id="lang-toggle">
+                        <span class="active" data-lang="en">EN</span>
+                        <span data-lang="zh">中</span>
+                    </div>
+                </div>
+                <div id="summary-content"></div>
+
+                <div class="exam-button-container">
+                    <a href="/api/record/{{ record.id }}/quiz" target="_blank" class="exam-button">開始測驗</a>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <h2>聊天室</h2>
+                <div class="chat-container">
+                    <div id="chat-messages"></div>
+                    <div class="chat-input-container">
+                        <input type="text" id="chat-input" placeholder="輸入訊息...">
+                        <button id="chat-submit">發送</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 語言切換功能
+        const summaryEn = `{{ record.content }}`;
+        const summaryZh = `{{ record.zh_content }}`;
+
+        function renderSummary(lang) {
+            const summaryContent = document.getElementById('summary-content');
+            const content = lang === 'en' ? summaryEn : summaryZh;
+            summaryContent.innerHTML = marked.parse(content);
+        }
+
+        document.getElementById('lang-toggle').addEventListener('click', function (e) {
+            if (e.target.tagName === 'SPAN') {
+                const lang = e.target.getAttribute('data-lang');
+                document.querySelector('.lang-toggle .active').classList.remove('active');
+                e.target.classList.add('active');
+                renderSummary(lang);
+            }
+        });
+
+        // 初始顯示英文摘要
+        renderSummary('en');
+
+
+        function fetchChat() {
+            const id = window.location.pathname.split('/').pop();
+            fetch(`/api/record/${id}/chat`)
+                .then(response => response.json())
+                .then(msgs => {
+                    msgs.forEach(msg => {
+                        if (msg.role !== 'system') {
+                            addMessage(msg.role, msg.message);
+                        }
+                    });
+                });
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value;
+            if (message.trim() !== '') {
+                addMessage('user', message);
+                const id = window.location.pathname.split('/').pop();
+                fetch(`/api/record/${id}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    addMessage('bot', data.response);
+                });
+                input.value = '';
+            }
+        }
+
+        function addMessage(sender, text) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender === 'user' ? 'user-message' : 'bot-message'}`;
+
+            // 使用 `marked` 解析 Markdown，並將其插入訊息容器
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.innerHTML = marked.parse(text);
+
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        document.getElementById('chat-submit').addEventListener('click', sendMessage);
+        document.getElementById('chat-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // 初始化聊天訊息
+        fetchChat();
+    </script>
+</body>
+</html>

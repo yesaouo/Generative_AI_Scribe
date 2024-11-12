@@ -533,13 +533,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="content">等待執行完成...</div>
             `;
         } else {
+            const title = record.title.replace(/\"/g, '').replace(/\#/g, '').replace(/\*/g, '');
+            const content = record.content.replace(/\#/g, '').replace(/\*/g, '');
             div.innerHTML = `
                 <div class="header">
-                    <h2>${record.title}</h2>
+                    <h2>${title}</h2>
                     <div class="heart">${record.isMark ? '❤️' : '🤍'}</div>
                 </div>
                 <div class="pdfs">${record.pdfs.map(pdf => pdf.name).join(', ')}</div>
-                <div class="content">${record.content}</div>
+                <div class="content">${content}</div>
             `;
             div.querySelector('.heart').addEventListener('click', function(e) {
                 e.stopPropagation();
