@@ -33,7 +33,10 @@
             </div>
         </div>
         <div id="result"></div>
-        <button id="next-btn" onclick="nextQuestion()" style="display:none;">下一題</button>
+        <div class="next-end-btn">
+            <button id="next-btn" onclick="nextQuestion()">下一題</button>
+            <button id="end-btn" onclick="showFinalResult()">結束測驗</button>
+        </div>
     </div>
 
     <div id="end-screen" style="display:none;">
@@ -91,8 +94,8 @@
             document.getElementById('question').innerText = questionData.question;
             correctAnswer = questionData.answer;
             document.getElementById('result').innerHTML = '';
-            document.getElementById('next-btn').style.display = 'none';
 
+            // 根據題型顯示相應的輸入方式
             if (currentCategory === 'TF') {
                 showTFButtons();
             } else if (currentCategory === 'CH') {
@@ -127,13 +130,13 @@
         function submitAnswer(answer) {
             const userAnswer = answer || document.getElementById('answer-input').value.trim();
             const resultDiv = document.getElementById('result');
+
             if (userAnswer.toString().toLowerCase() === correctAnswer.toString().toLowerCase()) {
                 correctCount++;
                 resultDiv.innerHTML = '<span class="correct">✔️ 恭喜你，答案正確！</span>';
             } else {
                 resultDiv.innerHTML = `<span class="incorrect">❗ 答案錯誤，正確答案是：${correctAnswer}</span>`;
             }
-            document.getElementById('next-btn').style.display = 'block';
         }
 
         function nextQuestion() {
