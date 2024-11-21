@@ -14,134 +14,87 @@ class QuestionManager():
     
     def __process(self, Sentences, Template, Question_num):
         Complexity = 5  # 預設複雜度
-        i = 0
         ls = []
 
-        while i < Question_num:
-            # 隨機挑選句子組合
+        for _ in range(Question_num):
             pick_up = self.__select_unique_elements_shuffle(Sentences, Complexity)
             string_sentences = '\n'.join(str(p) for p in pick_up)
             
-            # 構造聊天機器人輸入的 prompt
-            prompt = Template.replace("{usr_msg}", string_sentences)
+            prompt = Template.replace("<Article Content>", string_sentences)
             response = self.chatbot.chat(prompt)
 
-            # 使用正則表達式匹配所有 JSON-like 的物件
-            pattern = r'\{.*?\}'
-            response = response.replace('\n', '').replace('\'', '\"')  # 清理不必要的符號
-            response = re.sub(r'\s+', ' ', response).strip()  # 確保輸出乾淨
+            # 清理並匹配 JSON 字符串
+            response = response.replace('\n', '').replace('\'', '\"')
+            response = re.sub(r'\s+', ' ', response).strip()
+            matches = re.findall(r'\{.*?\}', response)
 
-            # 匹配並獲取所有 JSON 物件
-            matches = re.findall(pattern, response)
-
-            # 檢查每個物件是否包含 "question" 和 "answer" 屬性
-            try:
-                # 確保 matches 是一個列表
-                if not isinstance(matches, list):
-                    raise TypeError("Expected 'matches' to be a list.")
-
-                # 過濾掉不包含 "question" 和 "answer" 的物件
-                filtered_matches = [m for m in matches if "\"question\"" in m and "\"answer\"" in m]
-
-                # 如果有合法的 JSON，繼續處理
-                if filtered_matches:
-                    for match in filtered_matches:
-                        # 嘗試將 JSON 字符串轉換為 Python 字典
-                        try:
-                            json_obj = json.loads(match)
-                            ls.append(json_obj)
-                        except json.JSONDecodeError:
-                            print("Invalid JSON format found, skipping:", match)
-                else:
-                    print("No valid JSON objects found in response.")
-
-                i += 1  # 遞增計數器以生成下一個問題
-            except TypeError as e:
-                print(f"Error: {e}")
-            except Exception as e:
-                print(f"An unexpected error occurred: {e}")
+            # 直接嘗試轉換為 JSON
+            for match in matches:
+                try:
+                    json_obj = json.loads(match)
+                    ls.append(json_obj)
+                except json.JSONDecodeError:
+                    print("Invalid JSON format found, skipping:", match)
 
         return ls
 
-    def __generate(self, sentences, request):
+    def __generate(self, sentences):
         sentences = list(set(sentences))
 
-        # 定義一個通用模板函數來處理每種問題模板
-        def create_template(template_type, usr_msg="{usr_msg}"):
-            return f"""
-            <|im_start|>system
-            You are a helpful assistant<|im_end|>
-            <|im_start|>user
-            You are a question generator. Please use the following keyword-sentence pairs to generate some {template_type} and return it in JSON format, enclosed in curly braces. Respond directly with only the abstract and do not include any additional commentary.
-            {usr_msg}<|im_end|>
-            <|im_start|>assistant
-            """
+        # 專屬模板
+        TF_template = """
+Based on the following article, generate true/false questions in strict JSON format. Do not include any additional text or explanations. Each question should follow this exact structure:  
+{ "question": "<true/false question content>", "answer": true/false }.  
+Output the questions as a JSON array. Generate at least 5 questions. The article is as follows:  
+<Article Content>
+        """
+        
+        CH_template = """
+Based on the following article, generate multiple-choice questions with 4 answer options in JSON format. Each question should include:  
+- A "question" field with the question text.  
+- An "options" field as an array containing 4 answer choices.  
+- A "correct_answer" field indicating the correct answer from the options.  
+
+Output the questions as a JSON array. Do not include any text outside the JSON array. Generate at least 5 questions. The article is as follows:  
+<Article Content>
+        """
 
         # True or False questions
-        TF_template = create_template("true or false question and provide the answer with the attributes 'question' and 'answer'")
-        TF_q = self.__process(sentences, TF_template, request["TF"])
+        TF_q = self.__process(sentences, TF_template, 2)
 
-        # 檢查answer格式並處理
         valid_TF_q = []
         for item in TF_q:
+            question = item.get("question")
             answer = item.get("answer")
-            if isinstance(answer, bool):
-                valid_TF_q.append(item)
-            elif isinstance(answer, str) and answer.lower() in ["true", "false"]:
-                item["answer"] = answer.lower() == "true"  # 轉成布林值
+            if isinstance(question, str) and isinstance(answer, bool):
                 valid_TF_q.append(item)
 
-        TF_q = valid_TF_q  # 更新TF_q
+        TF_q = valid_TF_q
 
         # Multiple-choice questions
-        CH_template = create_template("multiple-choice question with 4 options. The JSON should include 'question', 'choices', and 'answer'")
-        CH_q = self.__process(sentences, CH_template, request["Choose"])
+        CH_q = self.__process(sentences, CH_template, 2)
 
-        # 檢查answer格式並處理
         valid_CH_q = []
         for item in CH_q:
-            answer = item.get("answer")
-            choices = item.get("choices", [])
+            question = item.get("question")
+            options = item.get("options")
+            correct_answer = item.get("correct_answer")
             
-            if isinstance(answer, int) and 1 <= answer <= len(choices):
-                # 如果 answer 是有效範圍內的數字
+            if (isinstance(question, str) and
+                isinstance(options, list) and
+                all(isinstance(opt, str) for opt in options) and
+                isinstance(correct_answer, int) and
+                1 <= correct_answer <= len(options)):
                 valid_CH_q.append(item)
-            elif isinstance(answer, str):
-                try:
-                    # 如果 answer 是字串且存在於 choices 中，將其轉為索引 + 1
-                    index = choices.index(answer) + 1
-                    item["answer"] = index
-                    valid_CH_q.append(item)
-                except ValueError:
-                    # answer 不在 choices 中，則跳過此項目
-                    continue
 
-        CH_q = valid_CH_q  # 更新CH_q
+        CH_q = valid_CH_q
 
-        # Fill-in-the-blank questions
-        BK_template = create_template("fill-in-the-blank question and provide the answer with the attributes 'question' and 'answer'")
-        BK_q = self.__process(sentences, BK_template, request["Blank"])
-
-        # Short answer questions
-        QA_template = create_template("short answer question and provide the answer with the attributes 'question' and 'answer'")
-        QA_q = self.__process(sentences, QA_template, request["QA"])
-
-        # 最終的 JSON 結構
         final_structure = {
-            "TF": TF_q,   # True/False
-            "CH": CH_q,   # Multiple-choice
-            "BK": BK_q,   # Fill-in-the-blank
-            "QA": QA_q    # Short answer
+            "TF": TF_q,
+            "CH": CH_q
         }
 
         return final_structure
     
     def get_quiz(self, sentences):
-        req = {
-            "TF": 3,
-            "Choose": 2,
-            "Blank": 2,
-            "QA": 2
-        }
-
-        return self.__generate(sentences, req)
+        return self.__generate(sentences)

@@ -18,14 +18,14 @@
         <div id="question">題目載入中...</div>
         <div id="answer-section">
             <div id="tf-buttons" style="display:none;">
-                <button class="btn-choice" onclick="submitAnswer('True')">O</button>
-                <button class="btn-choice" onclick="submitAnswer('False')">X</button>
+                <button class="btn-choice" onclick="submitAnswer(true)">O</button>
+                <button class="btn-choice" onclick="submitAnswer(false)">X</button>
             </div>
             <div id="mc-buttons" style="display:none;">
-                <button class="btn-choice" onclick="submitAnswer('A')">A.<span id="choice-1"></span></button>
-                <button class="btn-choice" onclick="submitAnswer('B')">B.<span id="choice-2"></span></button>
-                <button class="btn-choice" onclick="submitAnswer('C')">C.<span id="choice-3"></span></button>
-                <button class="btn-choice" onclick="submitAnswer('D')">D.<span id="choice-4"></span></button>
+                <button class="btn-choice" onclick="submitAnswer(1)">A.<span id="choice-1"></span></button>
+                <button class="btn-choice" onclick="submitAnswer(2)">B.<span id="choice-2"></span></button>
+                <button class="btn-choice" onclick="submitAnswer(3)">C.<span id="choice-3"></span></button>
+                <button class="btn-choice" onclick="submitAnswer(4)">D.<span id="choice-4"></span></button>
             </div>
             <div id="text-input-section" style="display:none;">
                 <input type="text" id="answer-input" placeholder="輸入答案">
@@ -54,13 +54,12 @@
         let correctCount = 0;
         let totalQuestions = 0;
         let currentQuestionNumber = 0;
+        let hasAnswered = false;
 
         function getTotalQuestions() {
             let total = 0;
             categoryOrder.forEach(category => {
-                if (category === "TF") {
-                    total += questions[category].filter(q => typeof q.answer === 'boolean').length;
-                } else {
+                if (Array.isArray(questions[category])) { // 確認 category 對應的值是陣列
                     total += questions[category].length;
                 }
             });
@@ -80,26 +79,21 @@
         }
 
         function loadQuestion() {
+            hasAnswered = false; // 重置狀態，表示新題目尚未回答
             let currentCategory = categoryOrder[currentCategoryIndex];
             let questionData = questions[currentCategory][currentQuestionIndex];
-
-            // 如果是非題且答案不是布爾值，跳到下一題
-            if (currentCategory === 'TF' && typeof questionData.answer !== 'boolean') {
-                nextQuestion();
-                return;
-            }
 
             currentQuestionNumber++;
             document.getElementById('question-number').innerText = `第 ${currentQuestionNumber} 題 / 共 ${totalQuestions} 題`;
             document.getElementById('question').innerText = questionData.question;
-            correctAnswer = questionData.answer;
+
+            correctAnswer = currentCategory === "CH" ? questionData.correct_answer - 1 : questionData.answer;
             document.getElementById('result').innerHTML = '';
 
-            // 根據題型顯示相應的輸入方式
-            if (currentCategory === 'TF') {
+            if (currentCategory === "TF") {
                 showTFButtons();
-            } else if (currentCategory === 'CH') {
-                showMCButtons(questionData.choices);
+            } else if (currentCategory === "CH") {
+                showMCButtons(questionData.options);
             } else {
                 showTextInput();
             }
@@ -115,8 +109,15 @@
             document.getElementById('tf-buttons').style.display = 'none';
             document.getElementById('mc-buttons').style.display = 'block';
             document.getElementById('text-input-section').style.display = 'none';
+
             for (let i = 1; i <= 4; i++) {
-                document.getElementById(`choice-${i}`).innerText = choices[i-1];
+                const button = document.getElementById(`choice-${i}`);
+                if (choices[i - 1]) {
+                    button.style.display = '';
+                    button.innerText = choices[i - 1]; // 顯示選項文字
+                } else {
+                    button.style.display = 'none'; // 若選項不足，隱藏按鈕
+                }
             }
         }
 
@@ -128,8 +129,31 @@
         }
 
         function submitAnswer(answer) {
+            if (hasAnswered) {
+                alert("⚠️ 你已經提交過答案了！");
+                return;
+            }
+
+            const currentCategory = categoryOrder[currentCategoryIndex];
             const userAnswer = answer || document.getElementById('answer-input').value.trim();
             const resultDiv = document.getElementById('result');
+
+            if (currentCategory === "CH") {
+                const selectedIndex = parseInt(userAnswer) - 1;
+
+                if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= 4) {
+                    resultDiv.innerHTML = '<span class="warning">⚠️ 請輸入有效的選項（1-4）！</span>';
+                } else if (selectedIndex === correctAnswer) {
+                    correctCount++;
+                    resultDiv.innerHTML = '<span class="correct">✔️ 恭喜你，答案正確！</span>';
+                } else {
+                    const correctOption = questions[currentCategory][currentQuestionIndex].options[correctAnswer];
+                    resultDiv.innerHTML = `<span class="incorrect">❗ 答案錯誤，正確答案是：${correctOption}</span>`;
+                }
+
+                hasAnswered = true; // 標記為已回答
+                return;
+            }
 
             if (userAnswer.toString().toLowerCase() === correctAnswer.toString().toLowerCase()) {
                 correctCount++;
@@ -137,14 +161,16 @@
             } else {
                 resultDiv.innerHTML = `<span class="incorrect">❗ 答案錯誤，正確答案是：${correctAnswer}</span>`;
             }
+
+            hasAnswered = true; // 標記為已回答
         }
 
         function nextQuestion() {
             let currentCategory = categoryOrder[currentCategoryIndex];
             currentQuestionIndex++;
 
-            // 如果當前類別的問題已經用完，移到下一個類別
-            while (currentQuestionIndex >= questions[currentCategory].length) {
+            // 如果當前類別不存在或沒有問題，跳到下一個類別
+            while (!Array.isArray(questions[currentCategory]) || currentQuestionIndex >= questions[currentCategory].length) {
                 currentQuestionIndex = 0;
                 currentCategoryIndex++;
 
@@ -153,6 +179,7 @@
                     showFinalResult();
                     return;
                 }
+
                 currentCategory = categoryOrder[currentCategoryIndex];
             }
 
